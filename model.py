@@ -88,8 +88,7 @@ class MultiHeadAttention(nn.Module):
         # ensuring the embedding dimension is divisible by the number of heads
         assert embed_dim % num_heads == 0, "embed_dim must be divisible by num_heads"
         # dimension of each attention head's key, query, and value vectors
-        self.single_head_dim
-        return x.transpose(1, 2)= embed_dim // num_heads
+        self.single_head_dim = embed_dim // num_heads
 
         # Defining the weight matrices
         self.w_q = nn.Linear(embed_dim, embed_dim) # weight matrix for query
@@ -211,9 +210,64 @@ class FeedForward(nn.Module):
         return self.fc2(self.dropout(self.relu(self.fc1(x))))
 
 
-# transformer encoder
+# transformer encoder layer
+class EncoderLayer(nn.Module):
+    def __init__(self, embed_dim, num_heads=8, dropout=0.1, d_ff=2048):
+        super().__init__()
+        self.mha = MultiHeadAttention(embed_dim, num_heads=num_heads, dropout=dropout)
+        self.norm1 = nn.LayerNorm(embed_dim)
+        self.dropout1 = nn.Dropout(dropout)
 
-# transformer decoder block
+        self.ffn = FeedForward(embed_dim, d_ff=d_ff, dropout=dropout)
+        self.norm2 = nn.LayerNorm(embed_dim)
+        self.dropout2 = nn.Dropout(dropout)
+
+    def forward(self, x, attention_mask=None, src_padding_mask=None):
+        # compute multi head attention
+        _x = x
+        x = self.mha(q=x, k=x, v=x, attention_mask=attention_mask, key_padding_mask=src_padding_mask)
+
+        # add and norm
+        x = self.dropout1(x)
+        x = self.norm1(x + _x)
+
+        # positionwise feed forward network
+        _x = x
+        x = self.ffn(x)
+
+        # add and norm
+        x = self.dropout2(x)
+        x = self.norm2(x + _x)
+        return x
+
+# transformer encoder
+class Encoder(nn.Module):
+    def __init__(self, vocab_size, embed_dim, dropout, n_encoder_blocks, n_heads):
+
+        super().__init__()
+        self.n_dim = n_dim
+
+        self.embedding = nn.Embedding(
+            num_embeddings=vocab_size,
+            embedding_dim=n_dim
+        )
+        self.positional_encoding = PositionalEncoding(
+            d_model=n_dim,
+            dropout=dropout
+        )
+        self.encoder_blocks = nn.ModuleList([
+            EncoderBlock(n_dim, dropout, n_heads) for _ in range(n_encoder_blocks)
+        ])
+
+
+    def forward(self, x, padding_mask=None):
+        x = self.embedding(x) * math.sqrt(self.n_dim)
+        x = self.positional_encoding(x)
+        for block in self.encoder_blocks:
+            x = block(x=x, src_padding_mask=padding_mask)
+        return x
+
+# transformer decoder layer
 
 # transformer decoder
 
